@@ -1,0 +1,40 @@
+#!/bin/bash
+set -e
+
+source='{{ mariadb_mirror_source }}'
+destination='{{ mirror_doc_root }}/mariadb/'
+
+lockfile=/tmp/$(basename -- "${destination}").lock
+
+
+if mkdir "$lockfile" 2>/dev/null;  then
+  # Exclude all metadata files
+  timeout 1d rsync "${source}" --recursive --times --links \
+                                           --hard-links \
+                                           --exclude Packages* \
+                                           --exclude Sources* \
+                                           --exclude Release* \
+                                           --exclude InRelease \
+                                           --exclude i18n/* \
+                                           --exclude ls-lR* \
+                                           --exclude repodata/* \
+                                           --timeout=10800 \
+                                           --exclude '.*.rpm.*' \
+                                           --exclude '.*.deb.*' \
+                                           "${destination}"
+
+  # Now also transfer the metadata and delete afterwards
+  timeout 1d rsync "${source}" --recursive --times --links \
+                                           --hard-links --delete-after \
+                                           --timeout=10800 \
+                                           --exclude '.*.rpm.*' \
+                                           --exclude '.*.deb.*' \
+                                           "${destination}"
+
+  date +%s > {{ mirror_timestamp_dir }}/mariadb
+else
+  cat <<EOF >&2
+ERROR: Another rsync is already running and has the lock file
+$LOCKFILE.
+EOF
+fi

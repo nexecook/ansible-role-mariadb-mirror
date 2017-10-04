@@ -1,0 +1,32 @@
+---
+
+- name: Install Update CRON
+  template:
+    src="mariadb-mirror.j2"
+    dest="{{ mirror_cron_dir }}/mariadb-mirror"
+    owner="{{ mirror_unix_user }}"
+    group="{{ mirror_unix_group }}"
+    mode=0700
+
+- name: Setup CRON Schedule
+  cron:
+    name="MariaDB"
+    minute="{{ mariadb_mirror_cron_minute }}"
+    hour="{{ mariadb_mirror_cron_hour }}"
+    user="{{ mirror_unix_user }}"
+    state="present"
+    job="{{ mirror_cron_dir }}/mariadb-mirror >/dev/null 2>&1"
+    disabled="{{ mariadb_mirror_cron_disabled }}"
+
+- stat:
+    path="{{ mirror_timestamp_dir }}/mariadb"
+  register: tsfile
+
+- name: Seed Timestamp File
+  copy:
+    content="0"
+    dest="{{ mirror_timestamp_dir }}/mariadb"
+    owner="{{ mirror_unix_user }}"
+    group="{{ mirror_unix_group }}"
+    mode=0644
+  when: not tsfile.stat.exists
