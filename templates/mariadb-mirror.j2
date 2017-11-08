@@ -8,6 +8,7 @@ lockfile=/tmp/$(basename -- "${destination}").lock
 
 
 if mkdir "$lockfile" 2>/dev/null;  then
+  trap 'rm -rf "$lockfile"' EXIT
   # Exclude all metadata files
   timeout 1d rsync "${source}" --recursive --times --links \
                                            --hard-links \
